@@ -69,7 +69,7 @@ if prompt := st.chat_input("예: '매장 인터넷 신규가입하고 핸드폰�
         try:
             # Chat Completion API 호출
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-6-luna",
                 messages=st.session_state.messages,
                 stream=True
             )
