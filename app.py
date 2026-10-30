@@ -55,7 +55,7 @@ for msg in st.session_state.messages:
             st.write(msg["content"])
 
 # 사용자 입력 처리
-if prompt := st.chat_input("예: 'LG 폰 쓰고 있는데 KT 인터넷 신규 가입하면 결합 혜택 어떻게 돼?'"):
+if prompt := st.chat_input("예: '매장 인터넷 신규가입하고 핸드폰은 LG U+ 유지하고 기기변경만 하고싶은데. 어떻게하면 가장 싸게 할수 잇어?'"):
     # 사용자 메시지 화면에 표시 및 저장
     with st.chat_message("user"):
         st.write(prompt)
