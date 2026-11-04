@@ -393,43 +393,24 @@ def speech_to_text(audio_file):
 # 2. 귀여운 에이 목소리 설정
 # ---------------------------------------------------------
 
+
 def text_to_speech(text):
-
-    result = client.audio.speech.create(
+    response = client.audio.speech.create(
         model="gpt-4o-mini-tts",
-        voice="coral",
-        input=text[:4000],
+        voice="shimmer",
+        input=text[:3500],
         response_format="mp3",
-        speed=1.05,
-        instructions="""
-        한국어로 자연스럽게 말하세요.
-
-        당신은 귀엽고 사랑스러운 아기 수달 AI 비서
-        '에이블'의 목소리입니다.
-
-        [목소리 스타일]
-        - 밝고 맑으며 사랑스러운 목소리
-        - 약간 높은 음역대의 부드러운 톤
-        - 귀여운 애니메이션 캐릭터처럼 생동감 있는 억양
-        - 듣는 사람이 기분 좋아지는 따뜻한 목소리
-        - 살짝 장난스럽지만 지나치게 과장하지 않는 느낌
-
-        [말하기 방식]
-        - 문장 끝은 부드럽게 마무리하세요.
-        - 기쁜 내용은 살짝 들뜬 목소리로 말하세요.
-        - 친절하고 상냥하게 이야기하세요.
-        - 너무 빠르게 말하지 마세요.
-        - 억양은 단조롭지 않게 자연스럽게 표현하세요.
-
-        [전문 비서 규칙]
-        - 업무 내용은 정확하고 또렷하게 전달하세요.
-        - 중요한 날짜와 숫자는 분명하게 발음하세요.
-        - 마감일과 결정사항은 차분하게 전달하세요.
-        - 업무 내용을 장난스럽게 왜곡하지 마세요.
-        """
+        instructions=(
+            "한국어로 말해 주세요. "
+            "밝고 귀여운 수달 비서 에이입니다. "
+            "맑고 상냥한 느낌으로 약간 발랄하게 말하되, "
+            "애교를 지나치게 과장하지 마세요. "
+            "중요한 날짜와 숫자는 또렷하게 발음하세요. "
+            "낭독체보다는 자연스러운 대화체로 말하세요."
+        )
     )
+    return response.content
 
-    return result.content
 
 
 # ---------------------------------------------------------
@@ -940,13 +921,70 @@ encouragements = [
     "☀️ 오늘 해낸 작은 일도 충분히 의미 있어요!",
     "💛 오늘도 애쓰고 있네요. 스스로에게도 다정하게 말해주세요!"
 ]
+import random
 # 처음 접속할 때 한 문구를 선택해서 저장
-    if "encouragement" not in st.session_state:
+if "encouragement" not in st.session_state:
     st.session_state.encouragement = random.choice(encouragements)
 # 실행 버튼을 누르지 않아도 메인 화면에 표시
-    st.info(st.session_state.encouragement)
+st.info(st.session_state.encouragement)
 
 # =========================================================
+
+# 에이블 레이아웃: 수달 이미지와 채팅창 높이 일치
+
+st.markdown("""
+<style>
+.block-container {
+    max-width: 1320px !important;
+    padding-top: 4rem !important;
+}
+
+.otter-card {
+    min-height: 0 !important;
+    height: auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+}
+
+.otter-card img {
+    display: block !important;
+    width: 100% !important;
+    max-width: 270px !important;
+    max-height: 350px !important;
+    height: auto !important;
+    object-fit: contain !important;
+    margin: 0 auto !important;
+}
+
+.otter-label {
+    text-align: center !important;
+    margin-top: 0.6rem !important;
+}
+
+[data-testid="stChatMessage"] p {
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+@media (max-width: 850px) {
+    .block-container {
+        padding-top: 3rem !important;
+    }
+
+    .otter-card img {
+        max-width: 180px !important;
+        max-height: 220px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # 8. 사이드바 - 상태 통합
 # =========================================================
 
@@ -1122,8 +1160,70 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
+st.markdown('''
+<style>
+
+/* 수달 영역을 채팅창 높이에 맞춤 */
+.otter-card {
+    height: 480px !important;
+    min-height: 480px !important;
+    max-height: 480px !important;
+
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+
+    padding: 0 0 10px !important;
+    overflow: visible !important;
+}
+
+/* 수달 캐릭터 확대 */
+.otter-card img {
+    display: block !important;
+
+    width: 100% !important;
+    max-width: 390px !important;
+    max-height: 420px !important;
+    height: auto !important;
+
+    object-fit: contain !important;
+    margin: 0 auto !important;
+}
+
+/* 캐릭터 이름 */
+.otter-label {
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    margin-top: 4px !important;
+}
+
+/* 모바일 화면 */
+@media (max-width: 850px) {
+    .otter-card {
+        height: auto !important;
+        min-height: 220px !important;
+        max-height: none !important;
+        justify-content: center !important;
+    }
+
+    .otter-card img {
+        width: 220px !important;
+        max-height: 260px !important;
+    }
+}
+
+</style>
+''', unsafe_allow_html=True)
+
 left, right = st.columns(
-    [1.05, 2.45],
+    [1.3, 2.7],
     gap="large"
 )
 
