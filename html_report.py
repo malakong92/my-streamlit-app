@@ -76,6 +76,8 @@ def create_html_report(data):
         {make_list(data.get('discussions', []))}</td></tr>
       <tr><td style="padding:8px 30px 20px;"><h2 style="font-size:18px;color:#172c4a;">03. 최종 결정 사항</h2>
         {make_list(decisions)}</td></tr>
+      <tr><td style="padding:8px 30px 20px;"><h2 style="font-size:18px;color:#172c4a;">논의된 제안사항</h2>
+        {make_list(data.get('proposals', []))}</td></tr>
       <tr><td style="padding:8px 30px 20px;"><h2 style="font-size:18px;color:#172c4a;">04. 김 대리 담당 업무</h2>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
           <tr style="background:#edf2f7;"><th align="left" style="padding:12px;">업무</th>
