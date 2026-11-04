@@ -238,7 +238,7 @@ def analyze(question):
     meeting_text = st.session_state.meeting_text
     if meeting_text:
         system += "\n\n[회의록]\n" + meeting_text[:40000]
-    
+
     messages = [{"role": "system", "content": system}]
     messages.extend(st.session_state.messages[-12:])
     messages.append({"role": "user", "content": question})
@@ -259,7 +259,7 @@ def process_question(question, enable_tts):
     if not question: return
     with st.spinner("에이블이 답변을 준비하고 있어요..."):
         result = analyze(question)
-    
+
     answer = result.answer
     if result.intent == "email_send":
         new_mail = result.email.model_dump()
@@ -274,7 +274,7 @@ def process_question(question, enable_tts):
     ])
     st.session_state.messages = st.session_state.messages[-20:]
     st.session_state.analysis = result.model_dump()
-    
+
     if enable_tts:
         try:
             st.session_state.last_audio = text_to_speech(result.voice_answer or answer)
@@ -324,7 +324,6 @@ with right:
 
 # 사이드바 설정
 
-
 with st.sidebar:
     st.title("🦦 에이블 설정")
 
@@ -348,7 +347,7 @@ with st.sidebar:
                     decoded = contents.decode("utf-8-sig")
                 except UnicodeDecodeError:
                     st.error("UTF-8로 저장된 TXT 파일을 올려주세요.")
-                else: 
+                else:
                     reset_chat()
                     st.session_state.meeting_text = decoded
                     st.session_state.meeting_name = uploaded.name
