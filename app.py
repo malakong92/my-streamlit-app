@@ -720,7 +720,7 @@ REPORT_TOOLS = [
         "type": "function",
         "name": "prepare_meeting_report",
         "description": "회의록에서 확인되는 회의 요약, 논의, 결정 및 김 대리의 담당 업무를 추출한다. 메일 발송은 하지 않는다.",
-        "strict": true,
+        "strict": True,
         "parameters": {
             "type": "object",
             "properties": {
@@ -795,7 +795,7 @@ REPORT_TOOLS = [
                             "source_quote",
                             "needs_confirmation"
                         ],
-                        "additionalProperties": false
+                        "additionalProperties": False
                     }
                 },
                 "followups": {
@@ -819,7 +819,7 @@ REPORT_TOOLS = [
                 "followups",
                 "proposals"
             ],
-            "additionalProperties": false
+            "additionalProperties": False
         }
     }
 ]
