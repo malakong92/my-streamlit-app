@@ -19,10 +19,12 @@ from pydantic import BaseModel, Field
 import html
 
 
+# ── HTML 출력용 특수문자 처리 ──
 def esc(value):
     return html.escape(str(value if value not in (None, "") else "확인 필요"))
 
 
+# ── 일반 이메일 HTML 생성 ──
 def create_html_email(subject, body):
     return f"""<html><body style="background:#f3f6fa;padding:24px;font-family:Arial,sans-serif;">
     <table role="presentation" width="100%" style="max-width:640px;margin:auto;background:white;border-collapse:collapse;">
@@ -34,7 +36,9 @@ def create_html_email(subject, body):
     </table></body></html>"""
 
 
+# ── 회의 요약 및 담당 업무 HTML 보고서 생성 ──
 def create_html_report(data):
+    # ── 보고서 목록 항목 HTML 생성 ──
     def make_list(items):
         if not items:
             return '<p style="color:#667085;">확인된 내용 없음</p>'
@@ -113,6 +117,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ── Secrets 및 환경 변수에서 설정 읽기 ──
 def get_secret(name):
     try:
         value = st.secrets.get(name, None)
@@ -233,6 +238,7 @@ SYSTEM_PROMPT = """
 - 전송 결과를 확인하기 전에는 발송 성공을 주장하지 않는다.
 """
 
+# ── 이메일 수신자·제목·본문 데이터 구조 ──
 class EmailInfo(BaseModel):
     recipient: str = Field(
         description="수신자 이메일. 없으면 빈 문자열"
@@ -240,6 +246,7 @@ class EmailInfo(BaseModel):
     subject: str = Field(description="이메일 제목")
     body: str = Field(description="이메일 본문")
 
+# ── AI 의도·답변·음성·이메일 결과 구조 ──
 class AIResult(BaseModel):
     intent: Literal[
         "meeting_summary",
@@ -257,6 +264,7 @@ class AIResult(BaseModel):
     clarification_question: str
     email: EmailInfo
 
+# ── 3-3. 이메일 발송 도구 정의 ──
 EMAIL_TOOL = {
     "type": "function",
     "name": "send_email",
@@ -278,6 +286,7 @@ EMAIL_TOOL = {
 # 4. 상태 관리
 # =========================================================
 
+# ── 4-1. 세션 상태 기본값 ──
 DEFAULTS = {
     "meeting_text": "",
     "meeting_hash": None,
@@ -302,6 +311,7 @@ for name, value in DEFAULTS.items():
         else:
             st.session_state[name] = value
 
+# ── 대화·분석·음성·이메일 초안 초기화 ──
 def reset_chat():
     for name in (
         "messages",
@@ -354,6 +364,7 @@ STT_HINT = (
     "이메일 발송, 최종 결정사항."
 )
 
+# ── Whisper로 녹음 음성을 한국어 텍스트로 변환 ──
 def speech_to_text(audio_file):
 
     result = client.audio.transcriptions.create(
@@ -374,6 +385,7 @@ def speech_to_text(audio_file):
 # 2. 귀여운 에이블 목소리 설정
 # ---------------------------------------------------------
 
+# ── 에이블 음성 답변 MP3 생성 ──
 def text_to_speech(text):
     response = client.audio.speech.create(
         model="gpt-4o-mini-tts",
@@ -395,6 +407,7 @@ def text_to_speech(text):
 # 3. 응답 설정별 차이 강화
 # ---------------------------------------------------------
 
+# ── 답변 스타일과 회의록을 반영한 AI 구조화 응답 ──
 def analyze(question):
 
     style = st.session_state.answer_style
@@ -554,6 +567,7 @@ voice_answer는 4~6문장으로 작성한다.
 # 4. 이메일 주소 유효성 검사
 # ---------------------------------------------------------
 
+# ── 수신자 이메일 주소 형식 검사 ──
 def valid_email(address):
 
     return bool(
@@ -567,6 +581,7 @@ def valid_email(address):
 # 5. AI 질문 처리
 # ---------------------------------------------------------
 
+# ── 질문 처리 및 대화·음성·이메일 초안 상태 갱신 ──
 def process_question(question, enable_tts):
 
     question = question.strip()
@@ -723,6 +738,7 @@ REPORT_TOOLS = [{
     }
 }]
 
+# ── Tool Calling으로 회의 보고서 데이터 추출 ──
 def prepare_meeting_report_data(meeting_text):
     response = client.responses.create(
         model=MODEL,
@@ -754,6 +770,7 @@ def prepare_meeting_report_data(meeting_text):
 # 6. 승인 후 이메일 전송
 # =========================================================
 
+# ── SMTP로 일반 이메일 또는 HTML 회의 보고서 발송 ──
 def send_email(to, subject, body, report_data=None):
 
     gmail = get_secret("GMAIL_ADDRESS")
@@ -811,6 +828,7 @@ def send_email(to, subject, body, report_data=None):
             "앱 설정과 로그를 확인해 주세요."
         )
 
+# ── 사용자 승인 이메일의 Tool Calling 실행 ──
 def approved_tool_send(email):
 
     approved = {
@@ -1020,6 +1038,7 @@ with st.sidebar:
     st.title("🦦 에이블 설정")
     st.subheader("📌 상태")
 
+    # ── 8-1. 회의록 업로드·미리보기·삭제 ──
     # 회의록 상태
     with st.expander("📄 회의록 상태", expanded=True):
 
@@ -1083,6 +1102,7 @@ with st.sidebar:
         else:
             st.caption("등록된 회의록이 없습니다.")
 
+    # ── 8-2. 대화 기억 상태 확인 ──
     # 대화 기억
     with st.expander("💬 대화 기억"):
 
@@ -1095,6 +1115,7 @@ with st.sidebar:
             "현재 브라우저 세션에서 유지됩니다."
         )
 
+    # ── 8-3. 간결·기본·상세 답변 스타일 선택 ──
     # AI 응답 설정
     with st.expander("🧠 응답 설정"):
 
@@ -1109,6 +1130,7 @@ with st.sidebar:
             "· JSON 구조화 응답"
         )
 
+    # ── 8-4. Gmail 설정 상태 확인 ──
     # 이메일 상태
     with st.expander("📧 이메일 상태"):
 
@@ -1127,6 +1149,7 @@ with st.sidebar:
             "수신자 확인 및 최종 승인 후에만 발송합니다."
         )
 
+    # ── 8-5. 음성 생성 및 자동재생 설정 ──
     # 음성 설정
     with st.expander("🔊 음성 설정"):
 
@@ -1147,6 +1170,7 @@ with st.sidebar:
 
     st.divider()
 
+    # ── 8-6. 대화 초기화 버튼 ──
     if st.button(
         "🗑️ 대화 초기화",
         use_container_width=True
@@ -1155,6 +1179,7 @@ with st.sidebar:
         reset_chat()
         st.rerun()
 
+    # ── 8-7. 대화 내역 TXT 다운로드 ──
     # 대화 다운로드
     if st.session_state.messages:
 
@@ -1367,6 +1392,7 @@ with right:
             use_container_width=True
         )
 
+    # ── 9-3. 입력한 텍스트 질문 전송 ──
     if send_prompt:
 
         if chat_prompt.strip():
@@ -1541,6 +1567,7 @@ with right:
                 type="primary", use_container_width=True
             )
 
+        # ── 9-7. 직접 작성한 이메일 검증 및 승인 대기 ──
         if draft_clicked:
             if not valid_email(manual_to.strip()):
                 st.error("올바른 수신자 이메일 주소를 입력하세요.")
@@ -1569,6 +1596,7 @@ with right:
 
         mail = st.session_state.pending_email
 
+        # ── 9-9. 발송 전 HTML 보고서 또는 이메일 미리보기 ──
         if mail.get("report_data") is not None:
             st.caption("📄 실제 발송될 HTML 회의 보고서 미리보기")
             st.components.v1.html(
@@ -1585,6 +1613,7 @@ with right:
                 scrolling=True
             )
 
+        # ── 9-10. 수신자·제목·본문 확인 및 승인 폼 ──
         with st.form("email_approval"):
 
             to = st.text_input(
@@ -1621,11 +1650,13 @@ with right:
                     use_container_width=True
                 )
 
+        # ── 9-11. 이메일 발송 취소 ──
         if cancel_clicked:
 
             st.session_state.pending_email = None
             st.rerun()
 
+        # ── 9-12. 발송 내용 검증·중복 방지·승인된 메일 전송 ──
         if send_clicked:
 
             approved = {
@@ -1703,6 +1734,7 @@ with st.expander(
     expanded=True
 ):
 
+    # ── 10-1. 추천 명령 6개 정의 ──
     quick_commands = [
         (
             "🎤 회의 핵심 요약",
@@ -1736,6 +1768,7 @@ with st.expander(
 
     c1, c2 = st.columns(2)
 
+    # ── 10-2. 추천 버튼 표시 및 질문 실행 ──
     for i, (label, command) in enumerate(quick_commands):
 
         with (c1 if i % 2 == 0 else c2):
@@ -1764,6 +1797,7 @@ with st.expander(
 # 11. AI 분석 결과
 # =========================================================
 
+# ── 11-1. 구조화 분석 결과 조회 및 JSON 다운로드 ──
 if st.session_state.analysis:
 
     with st.expander("🔎 구조화 분석 결과"):
