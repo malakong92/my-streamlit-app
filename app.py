@@ -323,14 +323,114 @@ with right:
         st.rerun()
 
 # 사이드바 설정
+
+
 with st.sidebar:
-    st.title("⚙️ 에이블 관리자")
-    uploaded = st.file_uploader("회의록 파일 (.txt)", type=["txt"])
-    if uploaded:
-        text = uploaded.getvalue().decode("utf-8-sig")
-        st.session_state.meeting_text = text
-        st.success("회의록 등록 성공!")
-    
-    if st.button("🗑️ 대화 초기화"):
+    st.title("🦦 에이블 설정")
+
+    # 1. 회의록 업로드 관리
+    with st.expander("📄 회의록 관리", expanded=True):
+        if "_meeting_upload_version" not in st.session_state:
+            st.session_state["_meeting_upload_version"] = 0
+
+        uploaded = st.file_uploader(
+            "회의록 TXT 업로드",
+            type=["txt"],
+            key=f"meeting_upload_{st.session_state["_meeting_upload_version"]}"
+        )
+
+        if uploaded is not None:
+            contents = uploaded.getvalue()
+            content_hash = hashlib.sha256(contents).hexdigest()
+
+            if content_hash != st.session_state.meeting_hash:
+                try:
+                    decoded = contents.decode("utf-8-sig")
+                except UnicodeDecodeError:
+                    st.error("UTF-8로 저장된 TXT 파일을 올려주세요.")
+                else: 
+                    reset_chat()
+                    st.session_state.meeting_text = decoded
+                    st.session_state.meeting_name = uploaded.name
+                    st.session_state.meeting_hash = content_hash
+
+                    if len(decoded) > 50000:
+                        st.warning("회의록이 길어 앞부분 5만 자까지만 분석에 사용됩니다.")
+
+        if st.session_state.meeting_text:
+            st.success("회의록 등록 완료")
+            st.caption(st.session_state.meeting_name)
+
+            with st.expander("회의록 미리보기"):
+                st.text(st.session_state.meeting_text[:6000])
+
+            if st.button("🗑️ 회의록 삭제", key="sidebar_delete_meeting", use_container_width=True):
+                reset_chat()
+                st.session_state.meeting_text = ""
+                st.session_state.meeting_hash = None
+                st.session_state.meeting_name = ""
+                st.session_state["_meeting_upload_version"] += 1
+                st.rerun()
+        else:
+            st.caption("등록된 회의록이 없습니다.")
+
+    # 2. 답변 스타일 설정
+    with st.expander("🧠 응답 설정", expanded=True):
+        st.radio("답변 스타일", ["간결", "기본", "상세"], key="answer_style")
+        st.caption(f"사용 모델: {MODEL}")
+
+    # 3. 음성 설정
+    with st.expander("🔊 음성 설정", expanded=True):
+        enable_tts = st.toggle("음성 답변 생성", value=True, key="sidebar_enable_tts")
+        auto_play = st.toggle("답변 자동재생", value=True, key="sidebar_auto_play")
+
+    # 4. 이메일 전송 환경 정보
+    with st.expander("📧 이메일 상태", expanded=True):
+        configured = bool(get_secret("GMAIL_ADDRESS") and get_secret("GMAIL_APP_PASSWORD"))
+        if configured:
+            st.success("이메일 설정 완료")
+        else:
+            st.warning("이메일 설정 필요")
+
+    st.divider()
+
+    if st.button("🗑️ 대화 초기화", key="sidebar_reset_chat", use_container_width=True):
         reset_chat()
         st.rerun()
+
+    if st.session_state.messages:
+        history_text = "\n\n".join(
+            ("사용자: " if m["role"] == "user" else "에이블: ") + m["content"]
+            for m in st.session_state.messages
+        )
+        st.download_button(
+            "📥 대화 내역 다운로드",
+            data=history_text,
+            file_name="able_chat.txt",
+            mime="text/plain",
+            key="sidebar_download_chat",
+            use_container_width=True
+        )
+
+
+# 추천 명령 6선
+st.divider()
+with st.expander("💡 추천 기능 — 버튼을 눌러 실행", expanded=True):
+    quick_commands = [
+        ("📄 회의 핵심 요약", "현재 회의록의 핵심 내용을 요약해줘."),
+        ("📋 내 담당 업무", "회의록에서 김대리에게 명시적으로 배정된 업무를 알려줘."),
+        ("✅ 최종 결정사항", "이번 회의에서 확정된 결정사항만 정리해줘."),
+        ("📝 이메일 초안", "이번 회의 핵심 내용으로 이메일 초안을 작성해줘."),
+        ("📧 이메일 발송 준비", "이번 회의 요약을 이메일로 보내줘. 발송 전에 수신자와 내용을 확인하고 싶어."),
+        ("🔎 업무 근거 확인", "담당 업무마다 근거가 되는 회의 발언을 알려줘.")
+    ]
+
+    if not st.session_state.meeting_text:
+        st.info("사이드바에서 회의록 TXT 파일을 먼저 업로드해 주세요!")
+
+    cols = st.columns(2)
+    for idx, (label, cmd) in enumerate(quick_commands):
+        with cols[idx % 2]:
+            if st.button(label, key=f"quick_{idx}", use_container_width=True, disabled=not bool(st.session_state.meeting_text)):
+                process_question(cmd, True)
+                st.rerun()
