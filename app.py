@@ -7,6 +7,7 @@ import hashlib
 import random
 import smtplib
 import tempfile
+import html
 from pathlib import Path
 from email.message import EmailMessage
 from typing import Literal
@@ -249,7 +250,6 @@ def reset_chat():
     st.session_state.stt_edit = ""
 
 # 접속 세션이 처음 만들어졌을 때 응원문구를 단 한 번 선택합니다.
-# Streamlit 위젯 조작으로 앱이 재실행되어도 문구는 유지됩니다.
 ENCOURAGEMENTS = [
     "🌱 작은 실행이 큰 변화를 만들어요!",
     "💪 오늘도 한 걸음 나아간 당신을 응원해요!",
@@ -269,10 +269,6 @@ if "encouragement" not in st.session_state:
 # 5. 음성 인식 / 음성 합성 / AI 응답 / 질문 처리
 # =========================================================
 
-# ---------------------------------------------------------
-# 1. Whisper STT 정확도 개선
-# ---------------------------------------------------------
-
 STT_HINT = (
     "한국어 업무 대화입니다. "
     "사용자는 김대리이고 AI 개인비서의 이름은 에이블입니다. "
@@ -284,7 +280,6 @@ STT_HINT = (
 
 # ── Whisper로 녹음 음성을 한국어 텍스트로 변환 ──
 def speech_to_text(audio_file):
-
     result = client.audio.transcriptions.create(
         model="whisper-1",
         file=(
@@ -296,12 +291,7 @@ def speech_to_text(audio_file):
         temperature=0,
         prompt=STT_HINT
     )
-
     return result.text.strip()
-
-# ---------------------------------------------------------
-# 2. 귀여운 에이블 목소리 설정
-# ---------------------------------------------------------
 
 # ── 에이블 음성 답변 MP3 생성 ──
 def text_to_speech(text):
@@ -321,23 +311,14 @@ def text_to_speech(text):
     )
     return response.content
 
-# ---------------------------------------------------------
-# 3. 응답 설정별 차이 강화
-# ---------------------------------------------------------
-
 # ── 답변 스타일과 회의록을 반영한 AI 구조화 응답 ──
 def analyze(question):
-
     style = st.session_state.answer_style
-
     style_rules = {
-
         "간결": """
 [응답 모드: 간결]
-
 목표:
 사용자가 핵심 정보만 빠르게 확인하도록 한다.
-
 규칙:
 1. answer는 가능한 1~3문장으로 작성한다.
 2. 핵심 결론을 가장 먼저 전달한다.
@@ -345,18 +326,14 @@ def analyze(question):
 4. 업무가 여러 개면 짧은 번호 목록으로 정리한다.
 5. 마감일과 중요한 수치는 빠뜨리지 않는다.
 6. 추가 제안은 사용자가 요청한 경우만 제공한다.
-
 [음성 답변]
 voice_answer는 1~2문장으로 작성한다.
 밝고 친근한 말투를 유지한다.
 """,
-
         "기본": """
 [응답 모드: 기본]
-
 목표:
 핵심 정보와 필요한 설명을 균형 있게 제공한다.
-
 규칙:
 1. answer는 대략 5~8문장으로 작성한다.
 2. 핵심 결론과 주요 근거를 함께 설명한다.
@@ -364,19 +341,15 @@ voice_answer는 1~2문장으로 작성한다.
 4. 필요한 경우 번호나 소제목을 사용한다.
 5. 불확실한 내용은 명확히 구분한다.
 6. 불필요한 반복을 피한다.
-
 [음성 답변]
 voice_answer는 2~4문장으로 작성한다.
 자연스럽고 다정하게 설명한다.
 """,
-
         "상세": """
 [응답 모드: 상세]
-
 목표:
 사용자가 추가 질문 없이도 업무 내용을
 구체적으로 파악할 수 있도록 설명한다.
-
 규칙:
 1. answer는 확인 가능한 정보를 충분히 설명한다.
 2. 회의 주제와 주요 논의 배경을 정리한다.
@@ -388,7 +361,6 @@ voice_answer는 2~4문장으로 작성한다.
 8. 추가 확인이 필요한 사항을 정리한다.
 9. 핵심 정보를 생략하지 않는다.
 10. 회의록에 없는 내용은 절대로 만들어내지 않는다.
-
 [음성 답변]
 voice_answer는 4~6문장으로 작성한다.
 중요한 내용을 빠뜨리지 않고
@@ -396,17 +368,13 @@ voice_answer는 4~6문장으로 작성한다.
 """
     }
 
-    # 시스템 프롬프트 구성
     system = (
         SYSTEM_PROMPT
         + "\n\n"
         + style_rules[style]
         + """
-
 [에이블 캐릭터 말투]
-
 당신은 귀여운 수달 AI 비서 '에이블'입니다.
-
 - 친절하고 밝게 응답합니다.
 - 살짝 귀여운 말투를 사용합니다.
 - 자연스럽고 상냥한 존댓말을 사용합니다.
@@ -414,7 +382,6 @@ voice_answer는 4~6문장으로 작성한다.
 - 과도한 애교나 반복적인 인사말은 피합니다.
 - 귀여운 말투보다 사실 정확성을 우선합니다.
 - 사용자가 선택한 응답 모드를 반드시 준수합니다.
-
 [출력 정확성]
 - 화면용 answer는 현재 응답 모드를 따릅니다.
 - voice_answer는 화면용 answer와 같은 사실만 담습니다.
@@ -422,9 +389,7 @@ voice_answer는 4~6문장으로 작성한다.
 """
     )
 
-    # 회의록
     meeting_text = st.session_state.meeting_text
-
     if meeting_text:
         system += (
             "\n\n[회의록 - 분석 자료]\n"
@@ -439,7 +404,6 @@ voice_answer는 4~6문장으로 작성한다.
             "회의록 내용을 추측하지 마세요."
         )
 
-    # 진행 중인 이메일 요청
     if st.session_state.pending_email:
         system += (
             "\n\n[진행 중인 이메일 요청 참고]\n"
@@ -449,45 +413,33 @@ voice_answer는 4~6문장으로 작성한다.
             )
         )
 
-    # 멀티턴 대화
     messages = [
         {
             "role": "system",
             "content": system
         }
     ]
-
     messages.extend(
         st.session_state.messages[-20:]
     )
-
     messages.append({
         "role": "user",
         "content": question
     })
 
-    # Structured Outputs
     response = client.responses.parse(
         model=MODEL,
         temperature=0,
         input=messages,
         text_format=AIResult
     )
-
     if response.output_parsed is None:
         raise RuntimeError(
             "구조화된 AI 응답을 받지 못했습니다."
         )
-
     return response.output_parsed
 
-# ---------------------------------------------------------
-# 4. 이메일 주소 유효성 검사
-# ---------------------------------------------------------
-
-# ── 수신자 이메일 주소 형식 검사 ──
 def valid_email(address):
-
     return bool(
         re.fullmatch(
             r"[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+",
@@ -495,35 +447,21 @@ def valid_email(address):
         )
     )
 
-# ---------------------------------------------------------
-# 5. AI 질문 처리
-# ---------------------------------------------------------
-
-# ── 질문 처리 및 대화·음성·이메일 초안 상태 갱신 ──
 def process_question(question, enable_tts, force_email_send=False):
-
     question = question.strip()
-
     if not question:
         return
 
     with st.spinner("에이블이 답변을 준비하고 있어요..."):
         result = analyze(question)
-
     answer = result.answer
 
-    # 이메일 발송 요청
     if result.intent == "email_send" or force_email_send:
-
         new_mail = result.email.model_dump()
-
         old_mail = (
             st.session_state.pending_email or {}
         )
-
-        # 이전 이메일 요청에서 누락된 정보 보완
         for key in ("recipient", "subject", "body"):
-
             if (
                 not new_mail.get(key)
                 and old_mail.get(key)
@@ -547,28 +485,21 @@ def process_question(question, enable_tts, force_email_send=False):
                 )
 
         st.session_state.pending_email = new_mail
-
         if valid_email(new_mail["recipient"]):
-
             answer = (
                 "네! 이메일 초안을 준비했어요! 🦦 "
                 "아래 발송 승인 영역에서 "
                 "수신자와 내용을 확인해 주세요."
             )
-
         else:
-
             answer = (
                 "이메일 초안을 준비했어요! "
                 "받는 분의 이메일 주소를 "
                 "알려주시면 발송 준비를 마칠게요."
             )
-
     elif result.intent != "clarification":
-
         st.session_state.pending_email = None
 
-    # 대화 이력 저장
     st.session_state.messages.extend([
         {
             "role": "user",
@@ -579,52 +510,33 @@ def process_question(question, enable_tts, force_email_send=False):
             "content": answer
         }
     ])
-
-    # 최근 10개 대화 유지
     st.session_state.messages = (
         st.session_state.messages[-20:]
     )
-
-    # 분석 상태 저장
     st.session_state.analysis = result.model_dump()
-
-    # 이전 음성 초기화
     st.session_state.last_audio = None
     st.session_state.autoplay_pending = False
 
-    # -----------------------------------------------------
-    # TTS: 귀여운 에이블 목소리 생성
-    # -----------------------------------------------------
-
     if enable_tts:
-
         try:
-
             speech_text = (
                 answer
                 if result.intent == "email_send"
                 else (result.voice_answer or answer)
             )
-
             with st.spinner(
                 "에이블이 귀여운 목소리로 이야기할 준비 중이에요..."
             ):
-
                 st.session_state.last_audio = (
                     text_to_speech(speech_text)
                 )
-
-            # 기존 UI에서 자동재생
             st.session_state.autoplay_pending = True
-
         except Exception as e:
-
             st.session_state.notice = (
                 "텍스트 답변은 생성됐지만 "
                 f"음성 생성에 실패했습니다: {type(e).__name__}"
             )
 
-# 회의록을 구조화된 보고서 데이터로 추출하는 Tool Calling
 REPORT_TOOLS = [
     {
         "type": "function",
@@ -734,74 +646,48 @@ REPORT_TOOLS = [
     }
 ]
 
-# ── Tool Calling으로 회의 보고서 데이터 추출 ──
-
-
-# ── 5-7. 원문 인용 검증 및 근거를 포함한 이메일 본문 ──
 def normalize(text):
     return re.sub(r"\s+", " ", text or "").strip()
 
 def clean_missing(value):
-    # 문자열 "null" 또는 빈 문자열 → 실제 None
     if value is None:
         return None
-
     if isinstance(value, str):
         value = value.strip()
-
         if value.lower() in ("", "null", "none"):
             return None
-
     return value
 
 def validate_tasks(data, original_text):
     errors = []
     original = normalize(original_text)
-
     for i, task in enumerate(data["my_tasks"], 1):
         quote = normalize(task["source_quote"])
-
-        # 누락값을 정리하고 원본 데이터에도 반영
         deadline = clean_missing(task["deadline"])
         deadline_quote = clean_missing(task["deadline_quote"])
-
         task["deadline"] = deadline
         task["deadline_quote"] = deadline_quote
 
-        # 담당자 확인
         assignee = re.sub(r"\s+", "", task["assignee"])
-
         if assignee != "김대리":
             errors.append(f"{i}번 업무: 담당자 확인 필요")
-
-        # 업무 배정 근거 확인
         if not quote or quote not in original:
             errors.append(f"{i}번 업무: 업무 배정 인용 불일치")
-
-        # 마감일이 없는 경우
         if deadline is None:
             if deadline_quote is not None:
                 errors.append(
                     f"{i}번 업무: 마감일은 없지만 마감일 근거가 있습니다."
                 )
-
-        # 마감일이 있는 경우
         else:
             evidence = normalize(deadline_quote)
-
             if not evidence:
                 errors.append(f"{i}번 업무: 마감일 근거 없음")
-
             elif evidence not in original:
                 errors.append(f"{i}번 업무: 마감일 인용 불일치")
-
             elif normalize(deadline) not in evidence:
                 errors.append(f"{i}번 업무: 마감일 표현 불일치")
-
-        # AI가 불확실하다고 표시한 업무
         if task["needs_confirmation"]:
             errors.append(f"{i}번 업무: 추가 확인 필요")
-
     return errors
 
 def build_email(data):
@@ -815,29 +701,20 @@ def build_email(data):
         "",
         "[확정된 결정사항]"
     ]
-
     for item in data["confirmed_decisions"]:
         lines.append(f"- {item}")
-
     if not data["confirmed_decisions"]:
         lines.append("- 확인된 결정사항 없음")
-
     lines.extend(["", "[논의된 제안사항]"])
-
     for item in data["proposals"]:
         lines.append(f"- {item}")
-
     if not data["proposals"]:
         lines.append("- 별도 제안사항 없음")
-
     lines.extend(["", "[김 대리 담당 업무]"])
-
     if not data["my_tasks"]:
         lines.append("- 확인된 담당 업무 없음")
-
     for i, task in enumerate(data["my_tasks"], 1):
         deadline = task["deadline"] or "미정"
-
         lines.extend([
             f"{i}. {task['task_name']}",
             f"   상세: {task['task_details']}",
@@ -847,16 +724,13 @@ def build_email(data):
             f"   마감일 근거: {task['deadline_quote'] or '없음'}",
             ""
         ])
-
     lines.extend([
         "",
         "※ 원문에 명시되지 않은 마감일은 미정으로 표시했습니다.",
         "※ 본 내용은 AI가 정리한 초안입니다."
     ])
-
     return "\n".join(lines)
 
-# ── 5-8. 기존 HTML 보고서 데이터와 업무 검증 형식 연결 ──
 def report_to_evidence_data(data):
     return {
         "meeting_summary": data.get("summary", ""),
@@ -876,8 +750,6 @@ def report_to_evidence_data(data):
         ],
     }
 
-
-# ── 5-9. 회의 보고서 추출 및 Python 원문 검증 ──
 def prepare_meeting_report_data(meeting_text):
     response = client.responses.create(
         model=MODEL,
@@ -920,7 +792,6 @@ def prepare_meeting_report_data(meeting_text):
 
 # ── SMTP로 일반 이메일 또는 HTML 회의 보고서 발송 ──
 def send_email(to, subject, body, report_data=None):
-
     gmail = get_secret("GMAIL_ADDRESS")
     password = get_secret("GMAIL_APP_PASSWORD")
 
@@ -934,7 +805,6 @@ def send_email(to, subject, body, report_data=None):
     if not valid_email(to):
         return False, "이메일 주소 형식이 올바르지 않습니다."
 
-    # ── 6-1a. 헤더 검사 및 발송 여부 불명 시 재발송 방지 ──
     if "\r" in subject or "\n" in subject:
         return False, "제목에는 줄바꿈을 넣을 수 없습니다."
     delivery_id = hashlib.sha256(json.dumps(
@@ -945,7 +815,6 @@ def send_email(to, subject, body, report_data=None):
         return False, "발송 여부가 불명확한 메일입니다. Gmail 보낸메일함을 확인하세요. 같은 내용의 재발송은 현재 세션에서 잠겨 있습니다."
 
     msg = EmailMessage()
-
     msg["From"] = gmail
     msg["To"] = to
     msg["Subject"] = subject
@@ -963,30 +832,25 @@ def send_email(to, subject, body, report_data=None):
             465,
             timeout=25
         ) as smtp:
-
             smtp.login(gmail, password.replace(" ", ""))
             delivery_attempted = True
             smtp.send_message(msg)
-
         return (
             True,
             "Gmail SMTP 서버에서 발송을 접수했습니다. "
             "수신 여부를 확인해 주세요."
         )
-
     except smtplib.SMTPAuthenticationError:
         return (
             False,
             "Gmail 인증에 실패했습니다. "
             "앱 비밀번호를 확인해 주세요."
         )
-
     except (smtplib.SMTPServerDisconnected, OSError):
         if delivery_attempted:
             st.session_state.uncertain_mail_ids.add(delivery_id)
             return False, "연결이 중단되어 발송 여부가 불명확합니다. Gmail 보낸메일함을 확인하세요. 중복 발송을 막기 위해 같은 메일의 재발송을 잠갔습니다."
         return False, "메일 서버 연결에 실패했습니다. 네트워크와 SMTP 설정을 확인하세요."
-
     except Exception as e:
         return (
             False,
@@ -994,15 +858,12 @@ def send_email(to, subject, body, report_data=None):
             "앱 설정과 로그를 확인해 주세요."
         )
 
-# ── 사용자 승인 이메일의 Tool Calling 실행 ──
 def approved_tool_send(email):
-
     approved = {
         "to": email["recipient"],
         "subject": email["subject"],
         "body": email["body"]
     }
-
     response = client.responses.create(
         model=MODEL,
         temperature=TEMPERATURE,
@@ -1029,30 +890,25 @@ def approved_tool_send(email):
             "name": "send_email"
         }
     )
-
     calls = [
         item for item in response.output
         if item.type == "function_call"
         and item.name == "send_email"
     ]
-
     if len(calls) != 1:
         return False, "메일 발송 도구 호출에 실패했습니다."
-
     try:
         args = json.loads(
             calls[0].arguments
         )
     except Exception:
         return False, "메일 발송 인자를 확인할 수 없습니다."
-
     if args != approved:
         return (
             False,
             "사용자가 승인한 메일과 다른 내용이어서 "
             "발송을 중단했습니다."
         )
-
     return send_email(
         args["to"],
         args["subject"],
@@ -1065,32 +921,21 @@ def approved_tool_send(email):
 # 이미지 전체 표시 + 넓은 채팅창
 # =========================================================
 
-# 별도 CSS 파일을 로드합니다. 기존 CSS 선언 순서를 유지합니다.
 st.markdown("<style>" + Path(__file__).with_name("styles.css").read_text(encoding="utf-8") + "</style>", unsafe_allow_html=True)
 
 # =========================================================
-
-# 에이블 레이아웃: 수달 이미지와 채팅창 높이 일치
-
-
 # 8. 사이드바 - 상태 통합
 # =========================================================
 
 with st.sidebar:
-
     st.title("🦦 에이블 설정")
     st.subheader("📌 상태")
 
-    # ── 8-1. 회의록 업로드·미리보기·삭제 ──
-    # 회의록 상태
     with st.expander("📄 회의록 상태", expanded=True):
-
         uploaded = st.file_uploader(
             "회의록 TXT 업로드",
             type=["txt"]
         )
-
-        # ── 8-1a. 회의 녹음 파일 업로드 및 중복 변환 방지 ──
         uploaded_audio = st.file_uploader(
             "회의 녹음 파일 업로드",
             type=["mp3", "wav", "m4a", "mp4", "webm"],
@@ -1140,121 +985,89 @@ with st.sidebar:
                     st.error(f"회의 녹음 변환 실패: {type(e).__name__}. 파일과 API 설정을 확인하세요.")
 
         if uploaded is not None and not conflicting_uploads:
-
             contents = uploaded.getvalue()
-
             content_hash = hashlib.sha256(
                 contents
             ).hexdigest()
-
             if content_hash != st.session_state.meeting_hash:
-
                 try:
                     decoded = contents.decode("utf-8-sig")
-
                     if len(decoded) > 50000:
                         st.warning(
                             "회의록이 길어 앞부분 5만 자까지만 "
                             "분석에 전달됩니다."
                         )
-
                     st.session_state.meeting_text = decoded
                     st.session_state.meeting_name = uploaded.name
                     st.session_state.meeting_hash = content_hash
-
                     reset_chat()
-
                 except UnicodeDecodeError:
                     st.error(
                         "UTF-8로 인코딩된 TXT 파일을 올려주세요."
                     )
 
         if st.session_state.meeting_text:
-
             st.success("회의록 등록 완료")
             st.caption(st.session_state.meeting_name)
-
             with st.expander("회의록 미리보기"):
                 st.text(
                     st.session_state.meeting_text[:6000]
                 )
-
             if st.button(
                 "회의록 삭제",
                 use_container_width=True
             ):
-
                 st.session_state.meeting_text = ""
                 st.session_state.meeting_hash = None
                 st.session_state.meeting_name = ""
-
                 reset_chat()
                 st.rerun()
-
         else:
             st.caption("등록된 회의록이 없습니다.")
 
-    # ── 8-2. 대화 기억 상태 확인 ──
-    # 대화 기억
     with st.expander("💬 대화 기억"):
-
         st.write(
             f"최근 대화: "
             f"**{len(st.session_state.messages)//2} / 10**"
         )
-
         st.caption(
             "현재 브라우저 세션에서 유지됩니다."
         )
 
-    # ── 8-3. 간결·기본·상세 답변 스타일 선택 ──
-    # AI 응답 설정
     with st.expander("🧠 응답 설정"):
-
         st.radio(
             "답변 스타일",
             ["간결", "기본", "상세"],
             key="answer_style"
         )
-
         st.caption(
             f"{MODEL} · Temperature {TEMPERATURE} "
             "· JSON 구조화 응답"
         )
 
-    # ── 8-4. Gmail 설정 상태 확인 ──
-    # 이메일 상태
     with st.expander("📧 이메일 상태"):
-
         configured = bool(
             get_secret("GMAIL_ADDRESS")
             and get_secret("GMAIL_APP_PASSWORD")
         )
-
         st.write(
             "설정 완료 ✅"
             if configured
             else "설정 필요 ⚠️"
         )
-
         st.caption(
             "수신자 확인 및 최종 승인 후에만 발송합니다."
         )
 
-    # ── 8-5. 음성 생성 및 자동재생 설정 ──
-    # 음성 설정
     with st.expander("🔊 음성 설정"):
-
         enable_tts = st.toggle(
             "음성 답변 생성",
             value=True
         )
-
         auto_play = st.toggle(
             "답변 자동재생",
             value=True
         )
-
         st.caption(
             "브라우저의 자동재생 정책에 따라 "
             "재생이 제한될 수 있습니다."
@@ -1262,19 +1075,14 @@ with st.sidebar:
 
     st.divider()
 
-    # ── 8-6. 대화 초기화 버튼 ──
     if st.button(
         "🗑️ 대화 초기화",
         use_container_width=True
     ):
-
         reset_chat()
         st.rerun()
 
-    # ── 8-7. 대화 내역 TXT 다운로드 ──
-    # 대화 다운로드
     if st.session_state.messages:
-
         history_text = "\n\n".join(
             (
                 "사용자: "
@@ -1283,7 +1091,6 @@ with st.sidebar:
             ) + m["content"]
             for m in st.session_state.messages
         )
-
         st.download_button(
             "📥 대화 내역 다운로드",
             history_text,
@@ -1303,18 +1110,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 left, right = st.columns(
     [1.3, 2.7],
     gap="large"
 )
 
-# ---------------------------------------------------------
-# 왼쪽: 수달 캐릭터
-# ---------------------------------------------------------
-
 with left:
-
     st.markdown(
         f"""
         <div class="otter-card">
@@ -1331,27 +1132,18 @@ with left:
         unsafe_allow_html=True
     )
 
-# ---------------------------------------------------------
-# 오른쪽: 수달과 실시간 대화
-# ---------------------------------------------------------
-
 with right:
-
     st.markdown("### 💬 에이블과 실시간 대화")
 
-    # 큰 대화 영역
     with st.container(
         height=300,
         border=True
     ):
-
         if not st.session_state.messages:
-
             with st.chat_message(
                 "assistant",
                 avatar=OTTER_AVATAR
             ):
-
                 st.markdown(
                     "안녕하세요! 🦦 저는 에이블이에요. "
                     "회의록을 올리고 필요한 업무를 물어보세요. "
@@ -1359,95 +1151,71 @@ with right:
                 )
 
         for message in st.session_state.messages:
-
             avatar = (
                 OTTER_AVATAR
                 if message["role"] == "assistant"
                 else "👤"
             )
-
             with st.chat_message(
                 message["role"],
                 avatar=avatar
             ):
-
                 st.markdown(
                     message["content"]
                 )
 
-    # 채팅창 바로 아래 입력창
     with st.form(
         "otter_chat_form",
         clear_on_submit=True
     ):
-
         chat_prompt = st.text_area(
             "에이블에게 메시지 보내기",
             placeholder="김대리님, 어떤 업무를 도와드릴까요?",
             height=95
         )
-
         send_prompt = st.form_submit_button(
             "💬 에이블에게 보내기",
             type="primary",
             use_container_width=True
         )
 
-    # ── 9-3. 입력한 텍스트 질문 전송 ──
     if send_prompt:
-
         if chat_prompt.strip():
-
             try:
                 process_question(
                     chat_prompt.strip(),
                     enable_tts
                 )
-
                 st.rerun()
-
             except Exception as e:
                 st.error(
                     f"답변 처리 오류: "
                     f"{type(e).__name__} — {e}"
                 )
-
         else:
             st.warning("메시지를 입력해주세요.")
 
-    # -----------------------------------------------------
-    # 음성 입력
-    # -----------------------------------------------------
-
     with st.expander("🎙️ 음성으로 말하기"):
-
         audio_input = st.audio_input(
             "음성을 녹음하세요"
         )
-
         if st.button(
             "음성 인식하기",
             use_container_width=True,
             disabled=audio_input is None
         ):
-
             try:
                 with st.spinner(
                     "음성을 텍스트로 변환 중..."
                 ):
-
                     transcript = speech_to_text(
                         audio_input
                     )
-
-    # 음성으로 이메일 발송을 요청한 경우
                 st.session_state.last_stt = transcript
-
                 email_request = (
                     ("이메일" in transcript or "메일" in transcript)
                     and any(word in transcript for word in ("보내", "발송", "전송"))
                 )
-
                 if email_request:
                     process_question(
                         transcript + " 이 요청은 이메일 발송 요청입니다. 발송 승인 화면을 준비해 주세요.",
@@ -1455,89 +1223,61 @@ with right:
                         force_email_send=True
                     )
                     st.session_state.stt_pending = None
-
                 else:
                     st.session_state.stt_pending = transcript
                     st.session_state.stt_edit = transcript
-
                 st.rerun()
-
-
             except Exception as e:
                 st.error(
                     f"음성 인식 실패: "
                     f"{type(e).__name__} — {e}"
                 )
 
-    # -----------------------------------------------------
-    # STT 인식 결과 확인 및 수정
-    # -----------------------------------------------------
-
     if st.session_state.stt_pending is not None:
-
         with st.container(border=True):
-
             st.info(
                 "STT 인식 결과를 확인하고 "
                 "틀린 부분을 수정할 수 있어요."
             )
-
             corrected = st.text_area(
                 "인식된 음성",
                 key="stt_edit",
                 height=90
             )
-
             a, b = st.columns(2)
-
             with a:
-
                 if st.button(
                     "✅ 이 문장으로 질문",
                     use_container_width=True,
                     type="primary"
                 ):
-
                     if corrected.strip():
-
                         try:
                             process_question(
                                 corrected,
                                 enable_tts
                             )
-
                             st.session_state.stt_pending = None
                             st.rerun()
-
                         except Exception as e:
                             st.error(
                                 f"답변 오류: "
                                 f"{type(e).__name__} — {e}"
                             )
-
                     else:
                         st.warning(
                             "입력 문장이 비어 있습니다."
                         )
-
             with b:
-
                 if st.button(
                     "취소",
                     use_container_width=True
                 ):
-
                     st.session_state.stt_pending = None
                     st.rerun()
 
-    # -----------------------------------------------------
-    # AI 음성 답변
-    # -----------------------------------------------------
-
     if st.session_state.last_audio is not None:
-
         st.caption("🔊 에이블의 음성 답변")
-
         st.audio(
             st.session_state.last_audio,
             format="audio/mp3",
@@ -1546,30 +1286,22 @@ with right:
                 and st.session_state.autoplay_pending
             )
         )
-
         st.session_state.autoplay_pending = False
 
     if st.session_state.notice:
-
         st.warning(st.session_state.notice)
         st.session_state.notice = ""
-
-    # -----------------------------------------------------
-    # 직접 이메일 작성 (기존 SMTP / 승인 로직 재사용)
-    # -----------------------------------------------------
 
     with st.expander("✉️ 직접 이메일 작성하기", expanded=False):
         st.caption(
             "회의록 없이도 이메일을 작성할 수 있습니다. "
             "작성 후에는 아래 승인 화면에서 최종 확인합니다."
         )
-
         if not get_secret("GMAIL_ADDRESS") or not get_secret("GMAIL_APP_PASSWORD"):
             st.info(
                 "실제 발송에는 Streamlit Secrets의 "
                 "GMAIL_ADDRESS, GMAIL_APP_PASSWORD 설정이 필요합니다."
             )
-
         with st.form("manual_email_compose", clear_on_submit=False):
             manual_to = st.text_input(
                 "받는 사람 이메일", placeholder="recipient@example.com"
@@ -1585,7 +1317,6 @@ with right:
                 type="primary", use_container_width=True
             )
 
-        # ── 9-7. 직접 작성한 이메일 검증 및 승인 대기 ──
         if draft_clicked:
             if not valid_email(manual_to.strip()):
                 st.error("올바른 수신자 이메일 주소를 입력하세요.")
@@ -1599,24 +1330,15 @@ with right:
                 }
                 st.success("이메일 초안을 준비했습니다. 아래에서 내용을 확인하고 승인하세요.")
 
-    # -----------------------------------------------------
-    # 이메일 승인 및 발송
-    # -----------------------------------------------------
-
     if st.session_state.pending_email:
-
         st.markdown("#### 📧 이메일 발송 승인")
-
         st.caption(
             "승인 버튼을 누르기 전까지 "
             "이메일은 실제 발송되지 않습니다."
         )
-
         mail = st.session_state.pending_email
 
-        # ── 9-9. 발송 전 HTML 보고서 또는 이메일 미리보기 ──
         if mail.get("report_data") is not None:
-            # ── 9-8a. 업무·마감일 원문 검증 결과 확인 ──
             validation_errors = mail["report_data"].get("validation_errors", [])
             if validation_errors:
                 st.warning("확인이 필요한 항목이 있습니다. 원문을 검토한 후 발송하세요.")
@@ -1641,52 +1363,39 @@ with right:
                 scrolling=True
             )
 
-        # ── 9-10. 수신자·제목·본문 확인 및 승인 폼 ──
         with st.form("email_approval"):
-
             to = st.text_input(
                 "받는 사람",
                 value=mail.get("recipient", "")
             )
-
             subject = st.text_input(
                 "메일 제목",
                 value=mail.get("subject", "")
             )
-
             body = st.text_area(
                 "메일 본문",
                 value=mail.get("body", ""),
                 height=170,
                 disabled=bool(mail.get("report_data"))
             )
-
             approve, cancel = st.columns(2)
-
             with approve:
-
                 send_clicked = st.form_submit_button(
                     "✅ 발송 승인",
                     type="primary",
                     use_container_width=True
                 )
-
             with cancel:
-
                 cancel_clicked = st.form_submit_button(
                     "취소",
                     use_container_width=True
                 )
 
-        # ── 9-11. 이메일 발송 취소 ──
         if cancel_clicked:
-
             st.session_state.pending_email = None
             st.rerun()
 
-        # ── 9-12. 발송 내용 검증·중복 방지·승인된 메일 전송 ──
         if send_clicked:
-
             approved = {
                 "recipient": to.strip(),
                 "subject": subject.strip(),
@@ -1696,19 +1405,14 @@ with right:
                 approved["report_data"] = mail["report_data"]
 
             if not valid_email(approved["recipient"]):
-
                 st.error(
                     "올바른 받는 사람 이메일을 입력하세요."
                 )
-
             elif not approved["subject"] or not approved["body"]:
-
                 st.error(
                     "제목과 본문을 입력하세요."
                 )
-
             else:
-
                 mail_id = hashlib.sha256(
                     json.dumps(
                         approved,
@@ -1718,33 +1422,25 @@ with right:
                 ).hexdigest()
 
                 if mail_id in st.session_state.sent_ids:
-
                     st.warning(
                         "현재 세션에서 이미 발송한 메일입니다."
                     )
-
                 else:
-
                     with st.spinner(
                         "승인된 이메일을 전송 중..."
                     ):
-
                         try:
                             success, message = approved_tool_send(
                                 approved
                             )
-
                             if success:
                                 st.session_state.sent_ids.add(
                                     mail_id
                                 )
-
                                 st.session_state.pending_email = None
                                 st.success(message)
-
                             else:
                                 st.error(message)
-
                         except Exception as e:
                             st.error(
                                 f"메일 처리 오류: "
@@ -1761,8 +1457,6 @@ with st.expander(
     "💡 추천 명령 — 누르면 즉시 질문",
     expanded=True
 ):
-
-    # ── 10-1. 추천 명령 6개 정의 ──
     quick_commands = [
         (
             "🎤 회의 핵심 요약",
@@ -1795,27 +1489,20 @@ with st.expander(
     ]
 
     c1, c2 = st.columns(2)
-
-    # ── 10-2. 추천 버튼 표시 및 질문 실행 ──
     for i, (label, command) in enumerate(quick_commands):
-
         with (c1 if i % 2 == 0 else c2):
-
             if st.button(
                 label,
                 key=f"quick_{i}",
                 use_container_width=True
             ):
-
                 try:
                     process_question(
                         command,
                         enable_tts,
                         force_email_send=(label == "📧 이메일 발송")
                     )
-
                     st.rerun()
-
                 except Exception as e:
                     st.error(
                         f"명령 실행 오류: "
@@ -1826,15 +1513,11 @@ with st.expander(
 # 11. AI 분석 결과
 # =========================================================
 
-# ── 11-1. 구조화 분석 결과 조회 및 JSON 다운로드 ──
 if st.session_state.analysis:
-
     with st.expander("🔎 구조화 분석 결과"):
-
         st.json(
             st.session_state.analysis
         )
-
         st.download_button(
             "마지막 분석 JSON 다운로드",
             json.dumps(
