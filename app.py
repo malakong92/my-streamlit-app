@@ -670,7 +670,7 @@ def process_question(question, enable_tts):
         }
     ])
 
-    # 최근 10개 대화쌍 유지
+    # 최근 10개 대화 유지
     st.session_state.messages = (
         st.session_state.messages[-20:]
     )
@@ -1413,7 +1413,7 @@ with st.sidebar:
 
         st.write(
             f"최근 대화: "
-            f"**{len(st.session_state.messages)//2} / 10쌍**"
+            f"**{len(st.session_state.messages)//2} / 10**"
         )
 
         st.caption(
