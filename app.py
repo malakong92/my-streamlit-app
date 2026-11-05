@@ -137,7 +137,7 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-MODEL = "gpt-6-luna"
+MODEL = "gpt-4o-mini"
 TEMPERATURE = 0
 
 # =========================================================
