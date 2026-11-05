@@ -1,0 +1,202 @@
+/* ===== 기존 스타일 블록 1: 원래 적용 순서 유지 ===== */
+.block-container {
+        max-width: 1550px;
+        padding-top: 1.5rem;
+        padding-bottom: 2.5rem;
+    }
+
+    .main-heading {
+        font-size: clamp(1.55rem, 2.6vw, 2.2rem);
+        font-weight: 800;
+        line-height: 1.5;
+        margin: 0 0 1rem 0;
+        color: var(--text-color);
+        word-break: keep-all;
+    }
+
+    .otter-card {
+        background: linear-gradient(
+            155deg,
+            #f2fbff,
+            #e6f7ff
+        );
+        border: 1px solid #cdebf6;
+        border-radius: 22px;
+        padding: 16px;
+        text-align: center;
+        min-height: 610px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .otter-card img {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        max-height: 540px;
+        height: auto;
+        object-fit: contain;
+        margin: 0 auto;
+    }
+
+    .otter-label {
+        color: #36728c;
+        font-weight: 700;
+        font-size: 1.05rem;
+        margin-top: 0.4rem;
+    }
+
+    .stButton > button {
+        border-radius: 10px;
+    }
+
+    @media(max-width:850px) {
+        .otter-card {
+            min-height: 200px;
+            padding: 8px;
+        }
+
+        .otter-card img {
+            max-height: 190px;
+            width: auto;
+        }
+    }
+
+/* ===== 기존 스타일 블록 2: 원래 적용 순서 유지 ===== */
+.block-container {
+    max-width: 1320px !important;
+    padding-top: 4rem !important;
+}
+
+.otter-card {
+    min-height: 0 !important;
+    height: auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+}
+
+.otter-card img {
+    display: block !important;
+    width: 100% !important;
+    max-width: 270px !important;
+    max-height: 350px !important;
+    height: auto !important;
+    object-fit: contain !important;
+    margin: 0 auto !important;
+}
+
+.otter-label {
+    text-align: center !important;
+    margin-top: 0.6rem !important;
+}
+
+[data-testid="stChatMessage"] p {
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+@media (max-width: 850px) {
+    .block-container {
+        padding-top: 3rem !important;
+    }
+
+    .otter-card img {
+        max-width: 180px !important;
+        max-height: 220px !important;
+    }
+}
+
+/* ===== 기존 스타일 블록 3: 원래 적용 순서 유지 ===== */
+/* 수달 위에 표시되는 세션별 응원 말풍선 */
+.otter-speech {
+    position: relative;
+    max-width: 360px;
+    width: calc(100% - 20px);
+    margin: 0 auto 20px;
+    padding: 15px 19px;
+    border: 2px solid #bededb;
+    border-radius: 19px;
+    background: #f0fbf8;
+    color: #174c4b;
+    text-align: center;
+    font-size: 0.98rem;
+    font-weight: 650;
+    line-height: 1.6;
+    box-shadow: 0 5px 12px rgba(22, 75, 72, .08);
+    overflow-wrap: anywhere;
+}
+.otter-speech::after {
+    content: "";
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 20px;
+    height: 20px;
+    background: #f0fbf8;
+    border-right: 2px solid #bededb;
+    border-bottom: 2px solid #bededb;
+}
+
+/* 말풍선과 수달을 함께 배치 */
+.otter-card {
+    height: 480px !important;
+    min-height: 480px !important;
+    max-height: 480px !important;
+
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+
+    padding: 0 0 10px !important;
+    overflow: visible !important;
+}
+
+/* 수달 캐릭터 확대 */
+.otter-card img {
+    display: block !important;
+
+    width: 100% !important;
+    max-width: 390px !important;
+    max-height: 335px !important;
+    height: auto !important;
+
+    object-fit: contain !important;
+    margin: 0 auto !important;
+}
+
+/* 캐릭터 이름 */
+.otter-label {
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    margin-top: 4px !important;
+}
+
+/* 모바일 화면 */
+@media (max-width: 850px) {
+    .otter-card {
+        height: auto !important;
+        min-height: 220px !important;
+        max-height: none !important;
+        justify-content: center !important;
+    }
+
+    .otter-card img {
+        width: 220px !important;
+        max-height: 260px !important;
+    }
+}

@@ -1,6 +1,4 @@
-# 2-1. HTML 이메일 및 회의 보고서 생성 함수
 import html
-
 
 # ── HTML 출력용 특수문자 처리 ──
 def esc(value):
