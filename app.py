@@ -1547,7 +1547,7 @@ def analyze_quick_meeting(text):
     """동일한 회의록은 기존 분석 결과를 재사용합니다."""
     cached = st.session_state.get("quick_analysis_cache")
 
-    if cached is not None and cached["source"] == text:
+    if cached is not None and cached["source"] == text and cached.get("evidence_policy") == "undetermined_v1":
         return cached["data"]
 
     response = client.chat.completions.create(
@@ -1588,13 +1588,12 @@ def analyze_quick_meeting(text):
     # 형식 준수와 별도로, 인용문이 실제 원문에 있는지 확인합니다.
     errors = check_quick_evidence(data, text)
 
-    if errors:
-        raise ValueError(
-            "원문 근거 검증 실패:\n" + "\n".join(errors)
-        )
+    # 근거가 부족해도 출력을 중단하지 않고 해당 항목을「미정」으로 표시합니다.
+    data["근거_확인_안내"] = errors
 
     st.session_state.quick_analysis_cache = {
         "source": text,
+        "evidence_policy": "undetermined_v1",
         "data": data
     }
 
@@ -1625,31 +1624,24 @@ def check_quick_evidence(data, text):
 
     for group_name, items in groups:
         for number, item in enumerate(items, start=1):
-            quote = item["근거_발언"]
+            quote = item.get("근거_발언")
+            if not isinstance(quote, str) or not quote.strip() or quote == "미정" or quote not in text:
+                item["근거_발언"] = "미정"
+                errors.append(f"{group_name} {number}번: 근거 미정")
 
-            if not quote.strip() or quote not in text:
-                errors.append(
-                    f"{group_name} {number}번: "
-                    "근거 발언이 원문과 일치하지 않습니다."
+            if "마감일" in item:
+                deadline = item.get("마감일")
+                deadline_quote = item.get("마감일_근거", quote)
+                valid_deadline = (
+                    isinstance(deadline, str) and bool(deadline.strip())
+                    and isinstance(deadline_quote, str) and bool(deadline_quote.strip())
+                    and deadline_quote != "미정" and deadline_quote in text
+                    and deadline in deadline_quote
                 )
-
-            deadline = item.get("마감일")
-
-            if deadline is not None:
-                deadline_quote = item.get(
-                    "마감일_근거",
-                    quote
-                )
-
-                if (
-                    not deadline_quote
-                    or deadline_quote not in text
-                    or deadline not in deadline_quote
-                ):
-                    errors.append(
-                        f"{group_name} {number}번: "
-                        "마감일 근거를 확인할 수 없습니다."
-                    )
+                if not valid_deadline:
+                    item["마감일"] = None
+                    item["마감일_근거"] = None
+                    errors.append(f"{group_name} {number}번: 마감일 및 마감일 근거 미정")
 
     return errors
 
@@ -1674,16 +1666,19 @@ def build_quick_email(data):
 
     for item in summary["논의_사항"]:
         lines.append(f"- {item['주제']}: {item['내용']}")
+        lines.append(f"   근거: {item['근거_발언']}")
 
     lines.extend(["", "[2. 김대리 담당 업무]"])
 
     if tasks:
         for i, item in enumerate(tasks, start=1):
-            deadline = item["마감일"] or "확인 필요"
+            deadline = item["마감일"] or "미정"
             lines.extend([
                 f"{i}. {item['업무']}",
                 f"   담당자: {item['담당자']}",
-                f"   마감일: {deadline}"
+                f"   마감일: {deadline}",
+                f"   근거: {item['근거_발언']}",
+                f"   마감일 근거: {item.get('마감일_근거') or '미정'}"
             ])
     else:
         lines.append("김대리에게 명시적으로 배정된 업무가 없습니다.")
@@ -1700,8 +1695,9 @@ def build_quick_email(data):
             if item["담당자"]:
                 lines.append(f"   담당자: {item['담당자']}")
 
-            if item["마감일"]:
-                lines.append(f"   마감일: {item['마감일']}")
+            lines.append(f"   마감일: {item['마감일'] or '미정'}")
+            lines.append(f"   근거: {item['근거_발언']}")
+            lines.append(f"   마감일 근거: {item.get('마감일_근거') or '미정'}")
     else:
         lines.append("회의록에서 확인된 최종 결정사항이 없습니다.")
 
@@ -1724,6 +1720,7 @@ def show_quick_result(action, data, source):
         for item in section["논의_사항"]:
             st.markdown(f"**{item['주제']}**")
             st.write(item["내용"])
+            st.text(f"근거: {item['근거_발언']}")
 
     elif action == "tasks":
         st.subheader("📋 김대리 담당 업무")
@@ -1736,7 +1733,8 @@ def show_quick_result(action, data, source):
         for i, item in enumerate(items, start=1):
             st.markdown(f"**{i}. {item['업무']}**")
             st.write("담당자:", item["담당자"])
-            st.write("마감일:", item["마감일"] or "확인 필요")
+            st.write("마감일:", item["마감일"] or "미정")
+            st.write("마감일 근거:", item.get("마감일_근거") or "미정")
             st.text(f"근거: {item['근거_발언']}")
 
     elif action == "decisions":
@@ -1751,7 +1749,8 @@ def show_quick_result(action, data, source):
             st.markdown(f"**{i}. {item['결정사항']}**")
             st.write("후속 업무:", item["후속_업무"] or "명시 없음")
             st.write("담당자:", item["담당자"] or "확인 필요")
-            st.write("마감일:", item["마감일"] or "확인 필요")
+            st.write("마감일:", item["마감일"] or "미정")
+            st.write("마감일 근거:", item.get("마감일_근거") or "미정")
             st.text(f"근거: {item['근거_발언']}")
 
     elif action == "evidence":
@@ -1768,14 +1767,13 @@ def show_quick_result(action, data, source):
             # st.text를 사용해 원문을 그대로 표시합니다.
             st.text(item["근거_발언"])
 
-            if item["근거_발언"] in source:
+            if item["근거_발언"] != "미정" and item["근거_발언"] in source:
                 st.success("인용문이 회의록 원문과 일치합니다.")
             else:
-                st.error("인용문이 회의록 원문과 일치하지 않습니다.")
+                st.info("근거: 미정 — 회의록 원문에서 확인되지 않았습니다.")
 
-            if item["마감일_근거"]:
-                st.write("마감일 근거")
-                st.text(item["마감일_근거"])
+            st.write("마감일 근거")
+            st.text(item.get("마감일_근거") or "미정")
 
         st.caption(
             "원문 일치는 인용문 존재 여부를 확인합니다. "
