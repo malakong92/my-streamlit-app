@@ -1633,7 +1633,7 @@ with left:
         </div>
         """,
         unsafe_allow_html=True
-    )
+  )
 
 # ---------------------------------------------------------
 # 오른쪽: 수달과 실시간 대화
@@ -1645,7 +1645,7 @@ with right:
 
     # 큰 대화 영역
     with st.container(
-        height=480,
+        height=300,
         border=True
     ):
 
