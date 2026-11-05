@@ -1645,7 +1645,7 @@ with right:
 
     # 큰 대화 영역
     with st.container(
-        height=480,
+        height=300,
         border=True
     ):
 
