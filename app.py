@@ -398,128 +398,23 @@ def queue_example(question):
     st.session_state.pending_question = question
 
 
-# ── 선배 질문 게시판 (시범 기능) ──
-# 코랩에서 생성한 기본 Chroma나 기존 RAG 체인에는 손대지 않습니다.
-# SQLite는 Streamlit 서버 로컬 저장소에 있으므로 배포/재시작 시 데이터가 사라질 수 있습니다.
-BOARD_DB_PATH = Path(tempfile.gettempdir()) / "aivle_senior_board.sqlite3"
+st.markdown("### 🎓 선배와의 연결")
 
+if st.button(
+    "💬 선배 Q&A",
+    key="open_senior_qna",
+    use_container_width=True
+):
+    st.session_state.app_view = "board"
+    st.rerun()
 
-def board_connect():
-    conn = sqlite3.connect(str(BOARD_DB_PATH), timeout=15)
-    conn.execute("PRAGMA busy_timeout=15000")
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            author TEXT NOT NULL,
-            title TEXT NOT NULL,
-            body TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS replies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question_id INTEGER NOT NULL,
-            author TEXT NOT NULL,
-            body TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-            FOREIGN KEY(question_id) REFERENCES questions(id)
-        )
-    """)
-    conn.commit()
-    return conn
-
-
-def board_questions():
-    with closing(board_connect()) as conn:
-        questions = conn.execute(
-            "SELECT id, author, title, body, created_at FROM questions ORDER BY id DESC"
-        ).fetchall()
-        replies = conn.execute(
-            "SELECT question_id, author, body, created_at FROM replies ORDER BY id ASC"
-        ).fetchall()
-    by_question = {}
-    for question_id, author, body, created_at in replies:
-        by_question.setdefault(question_id, []).append((author, body, created_at))
-    return questions, by_question
-
-
-def board_add_question(author, title, body):
-    with closing(board_connect()) as conn:
-        conn.execute(
-            "INSERT INTO questions (author, title, body) VALUES (?, ?, ?)",
-            (author, title, body),
-        )
-        conn.commit()
-
-
-def board_add_reply(question_id, author, body):
-    with closing(board_connect()) as conn:
-        conn.execute(
-            "INSERT INTO replies (question_id, author, body) VALUES (?, ?, ?)",
-            (question_id, author, body),
-        )
-        conn.commit()
-
-
-def render_senior_board():
-    with st.container(key="senior_board_page"):
-        st.markdown("## 💬 선배들에게 질문하기!")
-        st.write("후배가 질문을 남기면 선배가 댓글로 답하는 게시판입니다.")
-        st.caption("시범 기능 · 현재 로그인/선배 인증 기능이 없으며, 서버 재시작·재배포 시 게시글이 사라질 수 있습니다.")
-        if st.button("← AI 학습 도우미로 돌아가기", key="back_to_chat"):
-            st.session_state.app_view = "chat"
-            st.rerun()
-
-        with st.expander("✍️ 후배 질문 등록", expanded=True):
-            with st.form("create_question", clear_on_submit=True):
-                junior = st.text_input("후배 이름 또는 닉네임", max_chars=30, placeholder="예: 10기 교육생")
-                title = st.text_input("질문 제목", max_chars=120, placeholder="예: DX 프로젝트는 어떻게 준비하셨나요?")
-                body = st.text_area("질문 내용", max_chars=4000, height=130)
-                submitted = st.form_submit_button("질문 등록", use_container_width=True)
-            if submitted:
-                if not title.strip() or not body.strip():
-                    st.warning("제목과 질문 내용을 모두 입력해 주세요.")
-                else:
-                    try:
-                        board_add_question(junior.strip() or "익명 후배", title.strip(), body.strip())
-                        st.rerun()
-                    except sqlite3.Error:
-                        logger.exception("[BOARD ERROR] 질문 저장 실패")
-                        st.error("질문 저장에 실패했습니다.")
-
-        st.markdown("### 질문 목록")
-        try:
-            questions, reply_map = board_questions()
-        except sqlite3.Error:
-            logger.exception("[BOARD ERROR] 게시판 조회 실패")
-            st.error("게시판을 불러오지 못했습니다.")
-            return
-        if not questions:
-            st.info("아직 질문이 없습니다. 첫 질문을 등록해 보세요.")
-        for qid, author, title, body, created in questions:
-            with st.expander(f"Q{qid}. {title} · 댓글 {len(reply_map.get(qid, []))}개", expanded=False):
-                st.caption(f"후배 · {author} · {created}")
-                st.write(body)  # 사용자 입력을 HTML로 주입하지 않음
-                st.divider()
-                for reply_author, reply_body, reply_created in reply_map.get(qid, []):
-                    st.caption(f"💬 선배 답글 · {reply_author} · {reply_created}")
-                    st.write(reply_body)
-                    st.divider()
-                with st.form(f"senior_reply_{qid}", clear_on_submit=True):
-                    senior = st.text_input("선배 이름 또는 닉네임", key=f"senior_{qid}", max_chars=30)
-                    reply = st.text_area("선배 댓글", key=f"reply_{qid}", max_chars=4000, height=95)
-                    reply_submitted = st.form_submit_button("댓글 등록")
-                if reply_submitted:
-                    if not reply.strip():
-                        st.warning("댓글 내용을 입력해 주세요.")
-                    else:
-                        try:
-                            board_add_reply(qid, senior.strip() or "익명 선배", reply.strip())
-                            st.rerun()
-                        except sqlite3.Error:
-                            logger.exception("[BOARD ERROR] 댓글 등록 실패")
-                            st.error("댓글 저장에 실패했습니다.")
+if st.button(
+    "🤝 선배 멘토",
+    key="open_senior_mentor",
+    use_container_width=True
+):
+    st.session_state.app_view = "mentor"
+    st.rerun()
 
 
 # ── 기본 ◀ / ▶ 접기 버튼을 사용하는 사이드바 ──
